@@ -6,15 +6,22 @@ import { appApi } from "../api/clients";
 import Layout from "../components/Layout";
 import axios from "axios";
 
-const CreateAction = () => {
+/**
+ * Componente CreateAction.
+ * Renderiza un formulario modal para la creación de nuevas categorías de acciones sociales.
+ * Maneja validación de datos, carga de archivos (iconos) y estados de envío al servidor.
+ */
+const CreateAction: React.FC = () => {
   const navigate = useNavigate();
+
+  // --- Estados Locales ---
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  // Estado para controlar el error visual del logo específicamente
   const [logoError, setLogoError] = useState(false);
 
+  // --- Configuración de React Hook Form ---
   const {
     register,
     handleSubmit,
@@ -32,6 +39,9 @@ const CreateAction = () => {
     },
   });
 
+  /** * Observadores de campo (Hooks de vigilancia)
+   * Utilizados para actualizaciones de UI en tiempo real (contador de caracteres y vista previa de color).
+   */
   const descriptionValue = useWatch({
     control,
     name: "description",
@@ -44,15 +54,24 @@ const CreateAction = () => {
     defaultValue: "#4F46E5",
   });
 
+  /**
+   * Gestiona la selección del archivo de imagen.
+   * @param e - Evento de cambio del input de tipo file.
+   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null;
     if (selected) {
       setFile(selected);
       setFileName(selected.name);
-      setLogoError(false); // Quitar error cuando el usuario sube algo
+      setLogoError(false);
     }
   };
 
+  /**
+   * Procesa el envío del formulario.
+   * Transforma los datos del formulario a FormData para permitir el envío de archivos binarios.
+   * @param values - Objeto con los valores validados del formulario.
+   */
   const onSubmit = async (values: {
     name: string;
     description: string;
@@ -61,10 +80,10 @@ const CreateAction = () => {
   }) => {
     setServerError(null);
 
-    // VALIDACIÓN MANUAL DEL LOGO
+    // Validación manual para el campo de archivo (no gestionado por react-hook-form)
     if (!file) {
       setLogoError(true);
-      return; // Detiene el envío si no hay logo
+      return;
     }
 
     try {
@@ -75,30 +94,37 @@ const CreateAction = () => {
       formData.append("color", values.color);
       formData.append("icon", file);
 
+      // Petición POST a la instancia de API configurada
       await appApi.post("/actions/admin-add", formData);
 
       setSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 2000);
+      // Redirección retardada para permitir al usuario ver el mensaje de éxito
+      setTimeout(() => navigate("/dashboard"), 1800);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         setServerError(
           error.response?.data?.message ||
             "Error: El servidor no aceptó los datos."
         );
+      } else {
+        setServerError("Error inesperado");
       }
     }
   };
 
+  /**
+   * Renderizado de pantalla de éxito (Feedback visual post-registro)
+   */
   if (success) {
     return (
       <Layout>
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl flex flex-col items-center text-center max-w-sm w-full">
             <CheckCircle2 size={60} className="text-green-500 mb-4" />
             <h2 className="text-2xl font-bold text-gray-800">
               ¡Acción Creada!
             </h2>
-            <p className="text-gray-500">Redirigiendo al dashboard...</p>
+            <p className="text-gray-500 mt-2">Redirigiendo al dashboard...</p>
           </div>
         </div>
       </Layout>
@@ -107,22 +133,25 @@ const CreateAction = () => {
 
   return (
     <Layout>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-        <div className="w-full max-w-[480px] bg-white rounded-[32px] shadow-2xl overflow-hidden p-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-[#1E1B4B]">
+      {/* Contenedor del Modal */}
+      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 backdrop-blur-sm p-4 md:p-6 overflow-auto">
+        <div className="w-full max-w-[480px] md:rounded-[28px] bg-white p-5 md:p-8 shadow-2xl">
+          {/* Cabecera del Formulario */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-[#1E1B4B]">
               Crear categoría
             </h2>
             <button
               onClick={() => navigate("/dashboard")}
               className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Cerrar"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Nombre */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Campo: Nombre con validación obligatoria */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">
                 Nombre de la categoría*
@@ -143,7 +172,7 @@ const CreateAction = () => {
               )}
             </div>
 
-            {/* Descripción */}
+            {/* Campo: Descripción con límite de caracteres */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">
                 Descripción de la buena acción*
@@ -162,20 +191,18 @@ const CreateAction = () => {
                 }`}
               />
               <div className="flex justify-between items-center">
-                {errors.description ? (
+                {errors.description && (
                   <span className="inline-block px-3 py-1 rounded-md border border-red-500 text-red-500 text-xs font-medium">
                     {errors.description.message}
                   </span>
-                ) : (
-                  <div />
                 )}
-                <div className="text-xs text-gray-400 font-medium">
-                  {descriptionValue.length}/200
+                <div className="text-xs text-gray-400 font-medium ml-auto">
+                  {descriptionValue?.length ?? 0}/200
                 </div>
               </div>
             </div>
 
-            {/* Logo - CON VALIDACIÓN VISUAL */}
+            {/* Campo: Carga de Archivo (Logo) */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Logo*</label>
               <div className="relative">
@@ -212,16 +239,16 @@ const CreateAction = () => {
               )}
             </div>
 
-            {/* Color HEX */}
+            {/* Campo: Color HEX con vista previa dinámica */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">
                 Color (HEX)*
               </label>
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center">
                 <div
                   className="w-12 h-12 rounded-xl border border-gray-200 shadow-sm transition-colors duration-200 flex-shrink-0"
                   style={{
-                    backgroundColor: currentColor.match(
+                    backgroundColor: currentColor?.match(
                       /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
                     )
                       ? currentColor
@@ -253,7 +280,7 @@ const CreateAction = () => {
               )}
             </div>
 
-            {/* Status Toggle */}
+            {/* Campo: Estado Activo/Inactivo (Switch) */}
             <div className="flex items-center gap-4 py-2">
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -266,24 +293,26 @@ const CreateAction = () => {
               <span className="text-sm font-bold text-slate-700">Activo</span>
             </div>
 
+            {/* Mensaje de Error del Servidor */}
             {serverError && (
               <div className="bg-red-500 text-white p-3 rounded-xl text-sm font-medium">
                 {serverError}
               </div>
             )}
 
-            <div className="flex gap-4 pt-4">
+            {/* Acciones del Formulario */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => navigate("/dashboard")}
-                className="flex-1 py-4 border border-[#1E1B4B] text-[#1E1B4B] rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all"
+                className="w-full sm:flex-1 py-3 border border-[#1E1B4B] text-[#1E1B4B] rounded-2xl font-bold text-base hover:bg-gray-50 transition-all"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 py-4 bg-[#1E1B4B] text-white rounded-2xl font-bold text-lg disabled:bg-gray-300 transition-all shadow-lg shadow-indigo-100"
+                className="w-full sm:flex-1 py-3 bg-[#1E1B4B] text-white rounded-2xl font-bold text-base disabled:bg-gray-300 transition-all shadow-lg"
               >
                 {isSubmitting ? (
                   <Loader2 className="animate-spin mx-auto" />
