@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import { useAuth } from "./context/AuthContext";
+import CreateAction from "./pages/CreateAction";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -44,6 +45,15 @@ function App() {
 
         {/* Manejo de 404 - Opcional */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+        <Route
+          path="/dashboard/create"
+          element={
+            <ProtectedRoute>
+              <CreateAction />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
