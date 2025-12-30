@@ -1,42 +1,48 @@
-import axios from 'axios';
+import axios from "axios";
 
-// 1. API para Autenticación (Dominio 1)
-// Documento: https://dev.apinetbo.bekindnetwork.com/api/Authentication/Login
+// Auth API
 export const authApi = axios.create({
-  baseURL: 'https://dev.apinetbo.bekindnetwork.com/api',
+  baseURL: "https://dev.apinetbo.bekindnetwork.com/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// 2. API para Acciones/Dashboard (Dominio 2)
-// Documento: https://dev.api.bekindnetwork.com/api/v1/actions/admin-list
+// App API
 export const appApi = axios.create({
-  baseURL: 'https://dev.api.bekindnetwork.com/api/v1',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: "https://dev.api.bekindnetwork.com/api/v1",
 });
 
-// Interceptor: Inyectar token automáticamente en las peticiones de appApi
+// Request interceptor
 appApi.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // FormData: dejar que el browser maneje el Content-Type
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    } else {
+      config.headers["Content-Type"] = "application/json";
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Interceptor: Manejo global de errores (ej. Token expirado)
+// Response interceptor
 appApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login'; // Redirigir forzosamente
+      localStorage.removeItem("token");
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
