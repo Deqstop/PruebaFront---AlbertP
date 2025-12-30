@@ -100,23 +100,9 @@ Validar el flujo funcional completo de la aplicación:
 
 ---
 
-## 3\. Búsqueda y Paginación
+## 3\. Paginación
 
-### TC-07: Búsqueda por nombre de categoría
-
-**Pasos:**
-
-1. Escribir texto en el campo "Buscar"
-2. Presionar Enter
-
-**Resultado esperado:**
-
-* La tabla muestra solo resultados coincidentes
-* La paginación se ajusta a los resultados
-
----
-
-### TC-08: Cambio de cantidad de registros por página
+### TC-07: Cambio de cantidad de registros por página
 
 **Pasos:**
 
@@ -129,7 +115,7 @@ Validar el flujo funcional completo de la aplicación:
 
 ---
 
-### TC-09: Navegación entre páginas
+### TC-08: Navegación entre páginas
 
 **Pasos:**
 
@@ -144,7 +130,7 @@ Validar el flujo funcional completo de la aplicación:
 
 ## 4\. Creación de Acción
 
-### TC-10: Acceso a formulario de creación
+### TC-09: Acceso a formulario de creación
 
 **Pasos:**
 
@@ -156,7 +142,7 @@ Validar el flujo funcional completo de la aplicación:
 
 ---
 
-### TC-11: Validación de campos obligatorios
+### TC-10: Validación de campos obligatorios
 
 **Pasos:**
 
@@ -169,7 +155,7 @@ Validar el flujo funcional completo de la aplicación:
 
 ---
 
-### TC-12: Creación exitosa de una nueva acción
+### TC-11: Creación exitosa de una nueva acción
 
 **Pasos:**
 
@@ -188,7 +174,7 @@ Validar el flujo funcional completo de la aplicación:
 
 ## 5\. Manejo de Sesión
 
-### TC-13: Expiración o token inválido (401)
+### TC-12: Expiración o token inválido (401)
 
 **Pasos:**
 
