@@ -12,37 +12,96 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { appApi } from "../api/clients";
-import type { ActionItem, PaginatedResponse } from "../types";
+import type { ActionItem } from "../types";
 import Layout from "../components/Layout";
+
+/* =========================
+   Helpers de validación (sin 'any')
+   - validan en runtime que la respuesta tenga la forma esperada
+========================= */
+
+type RawObject = Record<string, unknown>;
+
+const isObject = (v: unknown): v is RawObject =>
+  typeof v === "object" && v !== null;
+
+const hasActionItemShape = (v: unknown): v is RawObject =>
+  isObject(v) && "id" in v && "name" in v && "status" in v;
+
+const extractActionItemsFromUnknown = (data: unknown): ActionItem[] => {
+  // Caso 1: la data ya es un array de items
+  if (Array.isArray(data) && data.every(hasActionItemShape)) {
+    return data as unknown as ActionItem[];
+  }
+
+  // Caso 2: la data es un objeto que tiene .items o .results
+  if (isObject(data)) {
+    const maybeItems = (data as RawObject).items;
+    const maybeResults = (data as RawObject).results;
+
+    if (Array.isArray(maybeItems) && maybeItems.every(hasActionItemShape)) {
+      return maybeItems as unknown as ActionItem[];
+    }
+
+    if (Array.isArray(maybeResults) && maybeResults.every(hasActionItemShape)) {
+      return maybeResults as unknown as ActionItem[];
+    }
+  }
+
+  // Fallback: vacío
+  return [];
+};
+
+const parseTotalRecords = (data: unknown): number | undefined => {
+  if (!isObject(data)) return undefined;
+  const tr = (data as RawObject).totalRecords;
+  if (typeof tr === "number") return tr;
+  if (typeof tr === "string") {
+    const n = Number(tr);
+    return Number.isFinite(n) ? Math.trunc(n) : undefined;
+  }
+  return undefined;
+};
+
+/* =========================
+   Component
+========================= */
 
 const Dashboard = () => {
   const navigate = useNavigate();
+
   const [data, setData] = useState<ActionItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [page, setPage] = useState<number>(1);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+
   const pageSize = 10;
 
   const fetchActions = useCallback(async () => {
     setLoading(true);
-    try {
-      const response = await appApi.get<PaginatedResponse<ActionItem>>(
-        "/actions/admin-list",
-        {
-          params: {
-            pageNumber: page,
-            pageSize: pageSize,
-          },
-        }
-      );
 
-      if (response.data && response.data.data) {
-        setData(response.data.data);
-        setTotalRecords(response.data.totalRecords || 0);
-      }
+    try {
+      // Pedimos 'unknown' como tipo de response.data para evitar any
+      const response = await appApi.get<unknown>("/actions/admin-list", {
+        params: {
+          pageNumber: page,
+          pageSize,
+        },
+      });
+
+      // response.data es unknown — lo normalizamos con nuestras funciones
+      const raw = response.data;
+
+      const items = extractActionItemsFromUnknown(raw);
+      const tr = parseTotalRecords(raw);
+
+      setData(items);
+      setTotalRecords(tr ?? items.length);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        console.error("Error de API:", error.response?.data);
+        console.error("Error de API:", error.response?.data ?? error.message);
+      } else {
+        console.error(error);
       }
     } finally {
       setLoading(false);
@@ -55,6 +114,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
+      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-[#1E1B4B]">Acciones</h1>
         <button
@@ -67,7 +127,7 @@ const Dashboard = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Barra de Herramientas */}
+        {/* Toolbar */}
         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <div className="relative w-64">
             <Search
@@ -85,7 +145,7 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Tabla */}
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -100,10 +160,7 @@ const Dashboard = () => {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="text-center py-10 text-gray-400 font-medium"
-                  >
+                  <td colSpan={5} className="text-center py-10 text-gray-400">
                     Cargando datos...
                   </td>
                 </tr>
@@ -115,10 +172,7 @@ const Dashboard = () => {
                 </tr>
               ) : (
                 data.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
+                  <tr key={String(item.id)} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-700">
                       {item.name}
                     </td>
@@ -133,28 +187,19 @@ const Dashboard = () => {
                         {item.status ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {item.description}
+                    <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs">
+                      {String(item.description ?? "")}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {item.createdAt
-                        ? new Date(item.createdAt).toLocaleDateString()
+                        ? new Date(String(item.createdAt)).toLocaleDateString()
                         : "N/A"}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center gap-3 text-gray-400">
-                        <Edit2
-                          size={16}
-                          className="cursor-pointer hover:text-[#1E1B4B]"
-                        />
-                        <Trash2
-                          size={16}
-                          className="cursor-pointer hover:text-red-500"
-                        />
-                        <Eye
-                          size={16}
-                          className="cursor-pointer hover:text-[#06B6D4]"
-                        />
+                        <Edit2 size={16} />
+                        <Trash2 size={16} />
+                        <Eye size={16} />
                       </div>
                     </td>
                   </tr>
@@ -164,7 +209,7 @@ const Dashboard = () => {
           </table>
         </div>
 
-        {/* Paginación */}
+        {/* Pagination */}
         <div className="p-4 flex justify-between items-center text-sm text-gray-500 bg-gray-50/30">
           <div>
             Mostrando {data.length} de {totalRecords} resultados
