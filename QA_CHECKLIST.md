@@ -9,7 +9,7 @@ Validar el flujo funcional completo de la aplicación:
 * Autenticación (Login)
 * Protección de rutas
 * Listado de categorías
-* Búsqueda y paginación
+* Paginación
 * Creación de una nueva acción
 
 ---
