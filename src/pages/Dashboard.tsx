@@ -6,45 +6,49 @@ import {
   ChevronRight,
   Edit2,
   Trash2,
+  SlidersHorizontal,
   Eye,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { appApi } from "../api/clients";
 import Layout from "../components/Layout";
 
-/* =========================
-   Tipos basados en la API
-========================= */
+/* --- Interfaces de Datos --- */
 
+/** Representa un elemento individual de categoría de acción. */
 interface ActionItem {
   id: string;
   name: string;
   description: string;
-  icon: string; // Campo 'icon' verificado en Postman
+  icon: string;
   color: string;
-  status: number; // 1 = Activo, 0 = Inactivo
+  /** Estado de la acción: 1 para Activo, 0 para Inactivo. */
+  status: number;
   createdAt: string;
 }
 
+/** Estructura de la respuesta paginada que entrega la API. */
 interface ApiWrapper {
   data: {
     pageNumber: number;
     pageSize: number;
     totalElements: number;
     totalPages: number;
-    data: ActionItem[]; // El array real está en este tercer nivel
+    data: ActionItem[];
   };
 }
 
-/* =========================
-   Componente Dashboard
-========================= */
-
-const Dashboard = () => {
+/**
+ * Componente Dashboard.
+ * Visualiza y gestiona las categorías, tipos y evidencias mediante una tabla paginada.
+ * Incluye funcionalidades de búsqueda, filtrado y navegación a creación.
+ */
+const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
-  // Estados
+  // --- Estados de Datos y UI ---
   const [data, setData] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(1);
@@ -56,7 +60,9 @@ const Dashboard = () => {
   const [query, setQuery] = useState<string>("");
 
   /**
-   * Petición a la API
+   * Obtiene los datos desde el servidor.
+   * Utiliza useCallback para evitar recrear la función en cada renderizado,
+   * optimizando el rendimiento y el ciclo de vida del useEffect.
    */
   const fetchActions = useCallback(async () => {
     setLoading(true);
@@ -65,61 +71,50 @@ const Dashboard = () => {
         params: {
           pageNumber: page,
           pageSize: pageSize,
-          search: query || undefined,
+          search: query || undefined, // Evita enviar strings vacíos a la API
         },
       });
 
-      // Ruta de acceso según estructura verificada: response.data (axios) -> .data (api wrapper) -> .data (array)
+      // Acceso seguro a la respuesta anidada de la API
       const apiResponse = response.data.data;
-      const items = apiResponse.data || [];
-      const total = apiResponse.totalElements || 0;
-
-      setData(items);
-      setTotalRecords(total);
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error de API:", error.response?.data ?? error.message);
-      } else {
-        console.error("Error inesperado:", error);
-      }
+      setData(apiResponse.data || []);
+      setTotalRecords(apiResponse.totalElements || 0);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
       setData([]);
     } finally {
       setLoading(false);
     }
   }, [page, pageSize, query]);
 
+  /**
+   * Efecto que dispara la carga de datos cada vez que cambian la página,
+   * el tamaño de página o el término de búsqueda.
+   */
   useEffect(() => {
     fetchActions();
   }, [fetchActions]);
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-extrabold text-[#12113A]">
-            {activeTab}
-          </h1>
-          <button
-            onClick={() => navigate("/dashboard/create")}
-            className="inline-flex items-center gap-2 bg-[#261647] text-white px-4 py-2 rounded-md shadow hover:opacity-95 transition-all"
-          >
-            <Plus size={16} />
-            Crear tipo de categoría
-          </button>
-        </div>
+      <div className="min-h-screen bg-white px-4 sm:px-10 py-8">
+        {/* Título dinámico basado en la pestaña activa */}
+        <h1 className="text-4xl font-bold text-[#12113A] mb-10">{activeTab}</h1>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="flex items-center gap-8 px-2 bg-white">
+        {/* --- Sistema de Navegación por Tabs --- */}
+        <div className="mb-8 border-b border-gray-100">
+          <nav className="flex gap-8">
             {(["Categorias", "Tipos", "Evidencias"] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => setActiveTab(t)}
-                className={`py-4 px-1 text-sm font-bold transition-all ${
+                onClick={() => {
+                  setActiveTab(t);
+                  setPage(1); // Reinicio a la primera página al cambiar de sección
+                }}
+                className={`pb-4 text-sm font-semibold transition-all relative ${
                   activeTab === t
-                    ? "border-b-2 border-[#261647] text-[#261647]"
-                    : "text-gray-400 hover:text-gray-600"
+                    ? "text-[#261647] border-b-2 border-[#261647]"
+                    : "text-gray-400"
                 }`}
               >
                 {t}
@@ -128,11 +123,11 @@ const Dashboard = () => {
           </nav>
         </div>
 
-        {/* Card Principal */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Buscador */}
-          <div className="px-6 py-5">
-            <div className="relative w-96">
+        {/* --- Barra de Herramientas (Búsqueda y Acciones) --- */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            {/* Input de Búsqueda */}
+            <div className="relative w-full md:w-64">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                 size={16}
@@ -142,146 +137,172 @@ const Dashboard = () => {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && fetchActions()}
                 placeholder="Buscar"
-                className="w-full rounded-lg border border-gray-200 px-10 py-2 text-sm outline-none focus:ring-2 focus:ring-[#261647]/20"
+                className="w-full border border-gray-300 rounded-md pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
+            <button className="flex items-center gap-2 text-[#12113A] font-bold text-sm">
+              <SlidersHorizontal size={16} />
+              Filtros
+            </button>
           </div>
 
-          {/* Tabla */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-white text-gray-400 text-[11px] uppercase tracking-wider font-bold border-b border-gray-100">
-                  <th className="px-6 py-4">Nombre de la categoría</th>
-                  <th className="px-6 py-4 text-center">Icono</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Descripción</th>
-                  <th className="px-6 py-4">Fecha de creación</th>
-                  <th className="px-6 py-4 text-center">Acciones</th>
-                </tr>
-              </thead>
+          <button
+            onClick={() => navigate("/dashboard/create")}
+            className="flex items-center justify-center gap-2 bg-[#1E1B4B] text-white px-6 py-2.5 rounded-md font-bold text-sm hover:bg-[#2d2a6e] transition-colors w-full md:w-auto shadow-sm"
+          >
+            <Plus size={16} />
+            Crear tipo de categoría
+          </button>
+        </div>
 
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-20 text-gray-400">
-                      Cargando registros...
+        {/* --- Tabla de Contenidos --- */}
+        <div className="overflow-x-auto border border-gray-100 rounded-sm">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+              <tr className="bg-[#F9FAFB] text-gray-500 text-xs font-bold border-b border-gray-200 uppercase tracking-wider">
+                <th className="px-6 py-4">
+                  Nombre de la categoría{" "}
+                  <span className="ml-1 opacity-50">↕</span>
+                </th>
+                <th className="px-6 py-4 text-center">
+                  Icono <span className="ml-1 opacity-50">↕</span>
+                </th>
+                <th className="px-6 py-4">
+                  Estado <span className="ml-1 opacity-50">↕</span>
+                </th>
+                <th className="px-6 py-4">
+                  Descripción <span className="ml-1 opacity-50">↕</span>
+                </th>
+                <th className="px-6 py-4">
+                  Fecha de creación <span className="ml-1 opacity-50">↕</span>
+                </th>
+                <th className="px-6 py-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {/* Renderizado condicional mientras carga o si no hay datos */}
+              {!loading &&
+                data.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-6 py-6 font-medium text-[#4B5563]">
+                      {item.name}
+                    </td>
+                    <td className="px-6 py-6 text-center">
+                      <div className="w-8 h-8 rounded flex items-center justify-center mx-auto overflow-hidden">
+                        {item.icon ? (
+                          <img
+                            src={item.icon}
+                            alt=""
+                            className="w-full h-full object-contain p-1"
+                          />
+                        ) : (
+                          <span className="text-[8px] font-bold text-pink-600">
+                            ICON
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-6">
+                      <span
+                        className={`px-4 py-1.5 rounded-md text-xs font-semibold ${
+                          item.status === 1
+                            ? "bg-[#DCFCE7] text-[#166534] border border-[#BBF7D0]"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {item.status === 1 ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-6 max-w-xs truncate">
+                      {item.description}
+                    </td>
+                    <td className="px-6 py-6">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-6">
+                      <div className="flex justify-center gap-4 text-gray-400">
+                        <Edit2
+                          size={16}
+                          className="cursor-pointer hover:text-indigo-600 transition-colors"
+                        />
+                        <Trash2
+                          size={16}
+                          className="cursor-pointer hover:text-red-600 transition-colors"
+                        />
+                        <Eye
+                          size={16}
+                          className="cursor-pointer hover:text-gray-600 transition-colors"
+                        />
+                      </div>
                     </td>
                   </tr>
-                ) : data.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-20 text-gray-400">
-                      No se encontraron registros.
-                    </td>
-                  </tr>
-                ) : (
-                  data.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50/50 transition-colors"
-                    >
-                      <td className="px-6 py-5 text-sm font-medium text-gray-700">
-                        {item.name}
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex justify-center">
-                          {item.icon ? (
-                            <img
-                              src={item.icon}
-                              alt={item.name}
-                              className="w-8 h-8 rounded-lg object-contain bg-gray-50 border border-gray-100 p-1"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center text-pink-600 text-[10px] font-bold">
-                              ID
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <span
-                          className={`inline-block px-3 py-1 text-[11px] font-bold rounded-md ${
-                            item.status === 1
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {item.status === 1 ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 text-sm text-gray-500 max-w-xs truncate">
-                        {item.description}
-                      </td>
-                      <td className="px-6 py-5 text-sm text-gray-500">
-                        {new Date(item.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex justify-center gap-4 text-gray-400">
-                          <Edit2
-                            className="cursor-pointer hover:text-indigo-600 transition-colors"
-                            size={16}
-                          />
-                          <Trash2
-                            className="cursor-pointer hover:text-red-600 transition-colors"
-                            size={16}
-                          />
-                          <Eye
-                            className="cursor-pointer hover:text-gray-600 transition-colors"
-                            size={16}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                ))}
+            </tbody>
+          </table>
+          {/* Spinner o estado vacío cuando loading es true */}
+          {loading && (
+            <div className="py-10 text-center text-gray-400">
+              Cargando datos...
+            </div>
+          )}
+        </div>
+
+        {/* --- Paginación y Footer --- */}
+        <div className="flex flex-col md:flex-row items-center justify-end gap-6 py-6 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            Resultados por página:
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border border-gray-300 rounded px-2 py-1 outline-none focus:border-indigo-500"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
           </div>
 
-          {/* Footer / Paginación */}
-          <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-            <div className="flex items-center gap-2">
-              <span>Resultados por página:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="bg-transparent font-bold outline-none cursor-pointer text-[#261647]"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-              </select>
-            </div>
+          <div className="font-medium">
+            {(page - 1) * pageSize + 1} -{" "}
+            {Math.min(page * pageSize, totalRecords)} de {totalRecords}
+          </div>
 
-            <div className="flex items-center gap-4">
-              <span className="font-medium">
-                {totalRecords > 0
-                  ? `${(page - 1) * pageSize + 1} - ${Math.min(
-                      page * pageSize,
-                      totalRecords
-                    )} de ${totalRecords}`
-                  : "0 - 0 de 0"}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="p-1 hover:bg-gray-100 rounded disabled:opacity-20 transition-all"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  disabled={page * pageSize >= totalRecords}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="p-1 hover:bg-gray-100 rounded disabled:opacity-20 transition-all"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
+          {/* Controles de navegación de página */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="p-1 hover:text-black disabled:opacity-20 transition-opacity"
+            >
+              <ChevronsLeft size={18} />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-1 hover:text-black disabled:opacity-20 transition-opacity"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page * pageSize >= totalRecords}
+              className="p-1 hover:text-black disabled:opacity-20 transition-opacity"
+            >
+              <ChevronRight size={18} />
+            </button>
+            <button
+              onClick={() => setPage(Math.ceil(totalRecords / pageSize))}
+              disabled={page * pageSize >= totalRecords}
+              className="p-1 hover:text-black disabled:opacity-20 transition-opacity"
+            >
+              <ChevronsRight size={18} />
+            </button>
           </div>
         </div>
       </div>
