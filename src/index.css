@@ -1,20 +1,49 @@
+/**
+ * ARCHIVO DE ESTILOS GLOBALES (Tailwind CSS)
+ * Define la identidad visual, el reset de base y los componentes reutilizables.
+ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /**
+   * Configuración base para el cuerpo del documento.
+   * - bg-surface: Color de fondo definido en tailwind.config.js (usualmente un gris muy claro).
+   * - antialiased: Mejora la renderización de las fuentes en navegadores modernos.
+   */
   body {
     @apply bg-surface text-gray-800 antialiased;
   }
 }
 
-/* Clases utilitarias para inputs del formulario basadas en Figma */
+/**
+ * COMPONENTES DE UI (Clases de abstracción)
+ * Estas clases permiten mantener la consistencia con el diseño de Figma sin repetir 
+ * múltiples utilidades en cada archivo de React.
+ */
 @layer components {
+  /**
+   * .input-primary
+   * Aplicado en: Login (Email/Password), CreateAction (Nombre/Color).
+   * Define el estado estándar de los campos de texto, incluyendo focus y estados deshabilitados.
+   */
   .input-primary {
-    @apply w-full rounded-md border border-gray-300 px-4 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all disabled:bg-gray-100;
+    @apply w-full rounded-md border border-gray-300 px-4 py-2 text-sm outline-none 
+           focus:border-primary focus:ring-1 focus:ring-primary transition-all 
+           disabled:bg-gray-100;
   }
-  
+
+  /**
+   * .btn-primary
+   * Aplicado en: Botón "Ingresar", "Crear Acción".
+   * Gestiona el esquema de color principal, efectos de hover y accesibilidad (ring-offset).
+   */
   .btn-primary {
-    @apply w-full rounded-md bg-primary py-2.5 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+    @apply w-full rounded-md bg-primary py-2.5 text-sm font-medium text-white 
+           hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary 
+           focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed 
+           transition-colors;
   }
 }
